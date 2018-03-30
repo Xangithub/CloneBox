@@ -1,0 +1,240 @@
+package ru.clonebox.client;
+
+import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.property.SimpleStringProperty;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
+import javafx.event.ActionEvent;
+import javafx.event.EventHandler;
+import javafx.fxml.FXML;
+import javafx.scene.control.*;
+import ru.clonebox.common.*;
+
+import java.io.File;
+import java.io.IOException;
+import java.nio.channels.SocketChannel;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.List;
+import java.util.stream.Collectors;
+
+public final class WindowClient {
+
+    public TableView<Path> localTableFS;
+    public TreeView rightTreeView;
+    public TableColumn<Path, String> name;
+    public TableColumn<Path, Long> size;
+    public TableView<File> netTableFS;
+    public TableColumn<File, String> nameServer;
+    public TableColumn<File, Long> sizeServer;
+    public Button btnCopy2Server;
+    public Button btnCopy2Local;
+    ClientSocketChannel clientSocketChannel;
+    SocketChannel socketChannel;
+    private String login;
+
+    Path localPath;
+
+
+    private ObservableList<Path> obsListFilesLocal = FXCollections.observableArrayList();
+    private ObservableList<File> obsListFilesNet = FXCollections.observableArrayList();
+
+
+    @FXML
+    private void initialize() {
+        Util.log("WindowClient initialize работает ");
+        clientSocketChannel = ClientSocketChannel.getClientSocketChannel();
+        this.socketChannel = clientSocketChannel.socketChannel;
+        clientSocketChannel.setWindowClient(this); //todo зачем знать ему о о главном окне?
+
+        if (clientSocketChannel != null) System.out.println("clientSocketChannel!=null");
+        if (DataProvider.dataProvider.getSocketChannel() != null)
+            System.out.println("DataProvider.dataProvider.getSocketChannel()!= null");
+        DataProvider.primaryStage.setOnCloseRequest(e -> {
+            e.consume();
+              CloseMessage closeMessage = new CloseMessage();
+              closeMessage.sendObject(socketChannel);
+              clientSocketChannel.interrupt(); //todo вот тут надо решить как обработать прерывание сетевой части, могут быть незавершенные операции. Пока ждём окончания
+              clientSocketChannel.closeConnection();
+            while (clientSocketChannel.isAlive()) {
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException e1) {
+                    e1.printStackTrace();
+                }
+            }
+
+                /*  if (DataProvider.c clientSocketChannel != null) {
+                    controller.clientSocketChannel.queueMessage2Server.add(new CloseMessage());
+
+                    while (!controller.clientSocketChannel.queueMessage2Server.isEmpty())
+                        System.out.print("Оповещаем сервер о закрытии клиента/r");
+                    while (controller.clientSocketChannel.isAlive()) System.out.print("Закрываем подключение/r");
+
+                }*/
+            DataProvider.primaryStage.close(); //закрытие окна
+        });
+
+
+        localPath = Paths.get(DataProvider.preferences.pathSync);
+        assert localPath != null;
+
+        File file = localPath.toFile();
+        SimpleFileTreeItem simpleFileTreeItem = new SimpleFileTreeItem(file);
+        rightTreeView.setRoot(simpleFileTreeItem);
+
+//Left Table -local
+        addFilesToObsList(localPath);
+
+        localTableFS.setItems(obsListFilesLocal);
+        localTableFS.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+
+        name.setCellValueFactory(nameLocalFile -> new SimpleStringProperty(nameLocalFile.getValue().getFileName().toString())); // еще бы до конца понять как эта штука работает
+        size.setCellValueFactory(sizeLocalFile -> new SimpleObjectProperty<Long>(sizeLocalFile.getValue().toFile().length()));
+        Util.log("Загружена локальная таблица ");
+
+// Right table -net
+        netTableFS.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+        /**
+         * задается контекстное меню
+         */
+        netTableFS.setRowFactory(param -> {
+            final TableRow<File> row = new TableRow<>();
+            final ContextMenu contextMenu = new ContextMenu();
+            final MenuItem createMenuItem = new MenuItem("Create");
+            final MenuItem deleteMenuItem = new MenuItem("Delete");
+            final MenuItem copyMenuItem = new MenuItem("Copy");
+            final MenuItem renameMenuItem = new MenuItem("Rename");
+
+//                createMenuItem.setOnAction();
+            deleteMenuItem.setOnAction(new EventHandler<ActionEvent>() {
+                @Override
+                public void handle(ActionEvent event) {
+                    netTableFS.getItems().remove(row.getItem());
+                }
+            });
+//                contextMenu.setOnAction();
+//                renameMenuItem.setOnAction();
+
+            contextMenu.getItems().addAll(createMenuItem, deleteMenuItem, copyMenuItem, renameMenuItem);
+
+//                row.contextMenuProperty().bind((ObservableValue<? extends ContextMenu>) contextMenu);
+            param.setContextMenu(contextMenu);
+            return row;
+
+        });
+
+        /**Блок запроса списка папок с сервера
+         *
+         */
+
+      /* clientSocketChannel.queueMessage2Server.add(new ListMessage(Message.LIST_REQUEST));
+        while (obsListFilesNet.isEmpty()) {
+            try {
+                Thread.sleep(500);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            System.out.println("Ждём ответа от сервера");
+        }*/
+
+
+        netTableFS.setItems(obsListFilesNet);
+        nameServer.setCellValueFactory(nameFile -> new SimpleStringProperty(nameFile.getValue().getName()));
+        sizeServer.setCellValueFactory(sizeFile -> new SimpleObjectProperty<Long>(sizeFile.getValue().length()));
+
+    }
+
+    private void addFilesToObsList(Path localPath) {
+        try {
+            obsListFilesLocal.clear();
+            obsListFilesLocal.addAll(Files.list(localPath).collect(Collectors.toList()));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+
+    public void copy2Server(ActionEvent actionEvent) {
+        ObservableList<Path> selected4Copy = localTableFS.getSelectionModel().getSelectedItems();
+
+//        if( ((Button) actionEvent.getSource()).getId().equals(btnCopy2Server)) messageCopyOnServer(selected4Copy);
+        if (((Button) actionEvent.getSource()).equals(btnCopy2Server)) messageCopyOnServer(selected4Copy);
+
+    }
+
+    public void copy2Local(ActionEvent actionEvent) {
+        ObservableList<File> selected4Copy = netTableFS.getSelectionModel().getSelectedItems();
+
+        if (((Button) actionEvent.getSource()).equals(btnCopy2Local)) messageCopyOnLocal(selected4Copy);
+
+    }
+
+    private void messageCopyOnLocal(ObservableList<File> selected4Copy) {
+        //todo тут еще обаботку, что на цели есть совпадающие имена совпадение.
+        if (selected4Copy.isEmpty()) {
+            return;
+        }
+        System.out.println("Копируем эти файлы на ПК " + selected4Copy);
+        for (File file : selected4Copy) {
+
+            try {
+//                clientSocketChannel.queueMessage2Server.add(new FileMessage(file.toPath(), Message.FILE_FROM_SERVER2CLIENT));
+                (new FileMessage(file.toPath(), Message.FILE_FROM_SERVER2CLIENT)).sendFile(clientSocketChannel.socketChannel);
+            } catch (Exception e) {
+                System.err.println("ВОзникли проблемы с чтением файла " + file + " файл невозможно отослать");
+            }
+
+        }
+
+    }
+
+
+    private void messageCopyOnServer(ObservableList<Path> selected4Copy) {
+
+        if (selected4Copy.isEmpty()) {
+            return;
+        }
+
+        System.out.println("Копируем эти файлы на сервер " + selected4Copy);
+
+        for (Path path : selected4Copy) {
+            try {
+                clientSocketChannel.queueMessage2Server.add(new FileMessage(path, Message.FILE_FROM_CLIENT2SERVER));
+//                clientSocketChannel.queueMessage2Server.add(new ListMessage(Message.LIST_REQUEST));
+            } catch (Exception e) {
+                System.err.println("ВОзникли проблемы с чтением файла " + path + " файл невозможно отослать");
+            }
+
+        }
+
+    }
+
+    public void updateLocalPanel() {
+        addFilesToObsList(localPath);
+    }
+
+    public void setLogin(String login) {
+        this.login = login;
+    }
+
+    public void updateRemotePanel(List<File> pathList) {
+        obsListFilesNet.clear();
+        obsListFilesNet.addAll(pathList);
+    }
+
+   /* @Override
+    protected void finalize() throws Throwable {
+        System.out.println("Работает finalize");
+        if (clientSocketChannel != null) {
+            clientSocketChannel.queueMessage2Server.add(new CloseMessage());
+
+            while (!clientSocketChannel.queueMessage2Server.isEmpty())
+                System.out.println("Оповещаем сервер о закрытии клиента");
+            clientSocketChannel.interrupt();
+            while (clientSocketChannel.isAlive()) System.out.println("Закрываем подключение");
+        }
+        //close(); //закрытие окна
+    }*/
+}

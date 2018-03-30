@@ -1,0 +1,259 @@
+package ru.clonebox.client;
+
+import ru.clonebox.common.*;
+import ru.clonebox.net.NetService;
+
+import java.io.*;
+import java.net.InetSocketAddress;
+import java.net.Socket;
+import java.nio.ByteBuffer;
+import java.nio.channels.*;
+import java.util.Iterator;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
+
+import static java.nio.channels.SelectionKey.OP_WRITE;
+
+public class ClientSocketChannel extends Thread {
+
+    private boolean statusProcessMessage = true;
+    BlockingQueue<AbstractMessage> queueMessage2Server = new ArrayBlockingQueue<AbstractMessage>(10);
+    SocketChannel socketChannel;
+    private static volatile ClientSocketChannel clientSocketChannel;
+    static Preferences preferences;
+    private Selector selector;
+
+    private WindowClient windowClient;
+
+    static ClientSocketChannel getClientSocketChannel() {
+
+        ClientSocketChannel localInstance = clientSocketChannel;
+        if (localInstance == null) {
+            synchronized (ClientSocketChannel.class) {
+                localInstance = clientSocketChannel;
+                if (localInstance == null) clientSocketChannel = localInstance = new ClientSocketChannel();
+
+            }
+
+        }
+        return localInstance;
+    }
+
+
+    private ClientSocketChannel() {
+        this.setName("Поток SocketChannel");
+        this.setDaemon(true);
+        Log log = new Log(ClientSocketChannel.class.getName());
+        this.start();
+    }
+
+     /* private void sendObject(SocketChannel client, AbstractMessage msg) {
+        ByteBuffer object = ByteBuffer.allocate(1024);
+        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+        ObjectOutputStream objectOutputStream = null;
+        try {
+            objectOutputStream = new ObjectOutputStream(byteArrayOutputStream);
+            objectOutputStream.writeObject(msg);
+            objectOutputStream.flush();
+            client.write(ByteBuffer.wrap(byteArrayOutputStream.toByteArray()));
+            System.out.println("Сообщение отправлено " + msg.getType());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+    }*/
+
+    private AbstractMessage receiveObject(SocketChannel channel) {
+        int msgSize = NetService.receiveHeader(channel);
+        if (msgSize == -1)
+            new ErrorMessage("Заголовок сообщения -1", "ClientSocketChannel"); //todo Может тут исключение кидать как вариант.
+
+        ByteBuffer data = ByteBuffer.allocate(msgSize);
+
+        int nBytesReceivedServer = 0;
+        try {
+            nBytesReceivedServer = channel.read(data);
+            ObjectInputStream objectInputStream = new ObjectInputStream(new ByteArrayInputStream(data.array())); //todo Если вдруг клиент отлетит этом месте будет Exception. Как обработать?
+            AbstractMessage msg = (AbstractMessage) objectInputStream.readObject();
+//            Util.log("receiveObject принято сообщение " + msg.getType() + "= " + nBytesReceivedServer);
+
+            return msg;
+
+
+        } catch (IOException e) {
+            System.out.println("Ошибка чтения данных из канала");
+            e.printStackTrace();
+        } catch (ClassNotFoundException e) {
+            System.out.println("Ошибка приведения типа сообщения");
+            e.printStackTrace();
+        }
+        /*finally {
+            return;
+        }*/
+
+        return new ErrorMessage("Ошибка принятия сообщения", "ClientSocketChannel");
+    }
+
+    void processingEvents(AbstractMessage receivedMessage) { //обработка входящих событий
+
+        Message type = receivedMessage.getType();
+
+        switch (type) {
+            case AUTH:
+                break;
+            case AUTH_ANS:
+                synchronized ( DataProvider.getMessageHandler().getQueueFromServer()) {
+                    DataProvider.getMessageHandler().getQueueFromServer().add(receivedMessage);
+                    DataProvider.getMessageHandler().getQueueFromServer().notify();
+                }
+                Util.log("AUTH_ANS положено в очередь");
+                break;
+            case LIST_ANSWER:
+                windowClient.updateRemotePanel(((ListMessage) receivedMessage).getPathList());
+                break;
+            case FILE_FROM_CLIENT2SERVER:
+                break;
+            case FILE_FROM_SERVER2CLIENT:
+
+                break;
+            case CLOSE_CONNECTION:
+                break;
+            case ERROR:
+                ErrorMessage errorMessage = ((ErrorMessage) receivedMessage);
+                System.out.println(errorMessage.getMsgError());
+                break;
+            default:
+                System.out.println("Не удалось определить тип сообщения " + receivedMessage.getType());
+        }
+
+
+    }
+
+    public void setStatusProcessMessage(boolean statusProcessMessage) { // флаг цикла обработки сообщений
+        this.statusProcessMessage = statusProcessMessage;
+    }
+
+
+    @Override
+    public void run() {
+
+        try {
+            Util.log("Run клиентского потока стартовал");
+
+            selector = Selector.open();
+            socketChannel = SocketChannel.open();
+            socketChannel.configureBlocking(false);
+            socketChannel.register(selector, SelectionKey.OP_CONNECT);
+            socketChannel.connect(new InetSocketAddress(Constance.REMOTE_ADDRESS, Constance.PORT));
+            DataProvider.dataProvider.setSocketChannel(socketChannel);
+
+            while (statusProcessMessage && !isInterrupted()) {
+                selector.select(50);
+//                selector.select();
+                Iterator<SelectionKey> iterator = selector.selectedKeys().iterator();
+
+                while (iterator.hasNext() && !isInterrupted()) {
+                    SelectionKey key = iterator.next();
+                    iterator.remove();
+                    SocketChannel client = socketChannel = (SocketChannel) key.channel();
+                    if (key.isConnectable()) {
+
+                        if (client.isConnectionPending()) {
+                            if (client.finishConnect()) {
+                                Util.log("Подключение к серверу состоялось");
+                                synchronized (clientSocketChannel) {
+                                    clientSocketChannel.notify(); // надо проверить что вообще сюда всегда попадает
+                                }
+                                DataProvider.dataProvider.setSocketChannel(socketChannel);
+                            }
+                        }
+
+                        client.register(selector, SelectionKey.OP_WRITE | SelectionKey.OP_READ);
+//                        client.register(selector, SelectionKey.OP_WRITE); //todo и ответные сообщения не принимаются
+
+                        continue;
+                    }
+
+
+                    if (!queueMessage2Server.isEmpty() & key.isWritable()) {
+                        AbstractMessage msg = queueMessage2Server.remove();
+                        FileMessage fileMessage;
+                        switch (msg.getType()) {
+                            case FILE_FROM_CLIENT2SERVER:
+                                fileMessage = ((FileMessage) msg);
+                                Util.log("Отправка данных о файле " + fileMessage.getFileNameString());
+                                msg.sendObject(client);
+                                fileMessage.sendFile(client);
+                                key.interestOps(SelectionKey.OP_READ);
+                                break;
+                            case FILE_FROM_SERVER2CLIENT:
+                                msg.sendObject(client);
+                                fileMessage = ((FileMessage) msg);
+                                fileMessage.receiveFile(client);
+                                windowClient.updateLocalPanel();
+                                break;
+
+                            case CLOSE_CONNECTION:
+                                msg.sendObject(client);
+                                interrupt();
+                                break;
+                            default:
+                                msg.sendObject(client);
+//                                key.interestOps(SelectionKey.OP_READ);
+                        }
+                    }
+
+                    if (key.isReadable()) {
+                        SocketChannel channel = (SocketChannel) key.channel();
+                        AbstractMessage receivedMessage = receiveObject(channel);
+//                        DataProvider.clientSocketChannel.queueMessageFromServer.add(receivedMessage);
+
+                        if (receivedMessage.getType() != Message.AUTH) processingEvents(receivedMessage);
+
+
+//                        System.out.println("Сообщение типа " + receivedMessage.getType() +" добавлено в очередь");
+                    }
+                }
+
+            }//while - process Message
+            Util.log("Если ты это видишь то сокетЧанелу пиздец");
+
+            socketChannel.close();
+
+            System.out.println("SocketChannel закрыт");
+
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    void closeConnection() {
+//        SelectionKey key = channel.keyFor(selector);
+//        key.interestOps(OP_WRITE);
+//        selector.wakeup();
+        try {
+            socketChannel.close();
+            selector.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    void selWakeUp() {
+        SelectionKey key = socketChannel.keyFor(selector);
+        key.interestOps(OP_WRITE);
+        selector.wakeup();
+    }
+
+    public SocketChannel getSocketChannel() {
+        return socketChannel;
+    }
+
+    public void setWindowClient(WindowClient windowClient) {
+        this.windowClient = windowClient;
+    }
+}
+
+
+

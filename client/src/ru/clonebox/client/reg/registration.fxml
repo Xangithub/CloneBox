@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.PasswordField?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.RowConstraints?>
+<?import javafx.scene.text.Text?>
+
+<GridPane alignment="center" hgap="10" stylesheets="@../preferences/pref.css" vgap="10" xmlns="http://javafx.com/javafx/8.0.141" xmlns:fx="http://javafx.com/fxml/1" fx:controller="ru.clonebox.client.reg.RegistrationController">
+
+  <padding><Insets bottom="10" left="25" right="25" top="25" /></padding>
+
+  <Label text="Имя пользователя:" GridPane.columnIndex="0" GridPane.rowIndex="1" />
+
+  <TextField fx:id="nameField" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+
+  <Label text="Пароль:" GridPane.columnIndex="0" GridPane.rowIndex="2" />
+
+  <PasswordField fx:id="passwordField" GridPane.columnIndex="1" GridPane.rowIndex="2" />
+  <Label text="Повторить пароль:" GridPane.rowIndex="3" />
+  <PasswordField fx:id="passwordField2" GridPane.columnIndex="1" GridPane.rowIndex="3" />
+  <Button fx:id="sendReg" onAction="#getRegistrationData" text="Регистрация и вход" GridPane.columnIndex="0" GridPane.halignment="RIGHT" GridPane.rowIndex="6" />
+  <Button  onAction="#handleRegistrationCancel" text="Отмена" GridPane.columnIndex="1" GridPane.halignment="RIGHT" GridPane.rowIndex="6" />
+  <Text fx:id="actiontarget" GridPane.columnIndex="1" GridPane.rowIndex="6" />
+   <columnConstraints>
+      <ColumnConstraints />
+      <ColumnConstraints />
+   </columnConstraints>
+   <rowConstraints>
+      <RowConstraints />
+      <RowConstraints />
+      <RowConstraints />
+      <RowConstraints />
+      <RowConstraints />
+      <RowConstraints />
+      <RowConstraints />
+   </rowConstraints>
+
+</GridPane>
