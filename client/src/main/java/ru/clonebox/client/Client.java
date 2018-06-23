@@ -30,9 +30,9 @@ public class Client extends Application {
         DataProvider.primaryStage = primaryStage;
 
         primaryStage.setTitle("Клиент CloneBox");
-//        primaryStage.getIcons().add(new Image(Client.class.getResourceAsStream("clonebox.png")));
-        ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
-        primaryStage.getIcons().add(new Image(String.valueOf(classLoader.getResource("image/clonebox.png"))));
+        primaryStage.getIcons().add(new Image(getClass().getResourceAsStream("clonebox.png")));
+//        ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+//        primaryStage.getIcons().add(new Image(String.valueOf(classLoader.getResource("ru/clonebox/client/image/clonebox.png"))));
 
         initRootLayout();
 
@@ -49,8 +49,7 @@ public class Client extends Application {
 
         try {
             FXMLLoader loader = new FXMLLoader(); //создаем объект для загрузки интерфейса
-//            loader.setLocation(Client.class.getResource("enter/enter.fxml")); //Указываем на файл с ресурсами
-            loader.setLocation(RLoader.getResource("view/enter.fxml")); //Указываем на файл с ресурсами
+            loader.setLocation(getClass().getResource("enter.fxml")); //Указываем на файл с ресурсами
             Pane rootLayout = loader.load(); //
             sceneAuthWindow = new Scene(rootLayout);
 

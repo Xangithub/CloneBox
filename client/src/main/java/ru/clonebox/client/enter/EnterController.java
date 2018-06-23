@@ -53,12 +53,16 @@ public class EnterController {
     private String p2;
     Credentials credentials = DataProvider.getDataProvider().getCredentials();
 
+    /**
+     * Инициализация
+     * 1. установка реакции на нажатие Закрыть через setOnClose
+     *
+     * */
     @FXML
     private void initialize() {
         DataProvider.primaryStage.setOnCloseRequest(e -> {
             e.consume();
             System.out.println("Отрабатывается setOnClose внутри EnterController");
-            //todo думал просто тут окно закрыть, но нет! а если клиент уже имеет подключение придётся проверять и закрывать
             if (clientSocketChannel.socketChannel != null) {
                 Task<AuthAnswer> task = new Task<AuthAnswer>() {
                     @Override
@@ -91,6 +95,10 @@ public class EnterController {
             passwordField.setText(credentials.passHash);
         } else saveCred.setSelected(false);
     }
+
+    /**
+     * Обработка кнопки Войти
+     */
 
     @FXML
     protected void handleEnterButtonAction(ActionEvent event) {
@@ -167,7 +175,7 @@ public class EnterController {
         AuthAnswer authAnswer = null;
 
         AuthRequest authMessage = new AuthRequest(credentials.getName(), credentials.getPassHash());
-
+        System.out.println("отправляется сообщение с  именем " + authMessage.getLogin() + " и паролем " + authMessage.getHashPassword());
         Task<AuthAnswer> task = new Task<AuthAnswer>() {
             @Override
             public AuthAnswer call() {
@@ -197,6 +205,9 @@ public class EnterController {
     }
 
 
+    /**
+     * Обработка кнопки Регистрация
+     */
     @FXML
     private void handleRegistrationButtonAction(ActionEvent event) {
         actiontarget.setText("Нажата кнопка Регистрация");
@@ -219,6 +230,9 @@ public class EnterController {
 
     }
 
+    /**
+     * Обработка кнопки Настройки
+     */
 
     @FXML
     private void handlePropertiesAction(ActionEvent event) {
@@ -239,6 +253,9 @@ public class EnterController {
 
     }
 
+    /**
+     * Загрузка главного окна
+     */
     private void showMainWindow() {
         try {
             // Загружаем fxml-файл и создаём новую сцену
@@ -257,6 +274,11 @@ public class EnterController {
     }
 
 
+    /**
+     * обработка ответа от сервера
+     *
+     * @param answer
+     */
     private void processAuthResult(AuthAnswer answer) {
         if (answer.isAuthOK()) {
             //Если с логином и паролем ОК то сохранить

@@ -1,4 +1,4 @@
-package ru.clonebox.client.pref;
+package ru.clonebox.client.preferences;
 
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;

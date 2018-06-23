@@ -1,11 +1,11 @@
 package ru.clonebox.server.DAO;
 
 import org.hibernate.Session;
-import ru.clonebox.entity.UsersEntity;
 
 import java.sql.Timestamp;
 import java.util.Date;
 import java.util.List;
+import ru.clonebox.entity.*;
 
 
 public class UserDAO implements DBhelper {

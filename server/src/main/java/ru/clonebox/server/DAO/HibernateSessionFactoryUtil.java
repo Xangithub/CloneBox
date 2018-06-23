@@ -14,7 +14,7 @@ public final class HibernateSessionFactoryUtil {
     public static synchronized Session createHibernateSession() {
         if (sessionFactory == null) {
             Configuration configuration = new Configuration();//.configure();
-            configuration.addAnnotatedClass(ru.clonebox.entity.UsersEntity.class);
+            configuration.addAnnotatedClass(UsersEntity.class);
             StandardServiceRegistryBuilder builder = new StandardServiceRegistryBuilder().applySettings(configuration.getProperties());
             sessionFactory = configuration.buildSessionFactory(builder.build());
         }

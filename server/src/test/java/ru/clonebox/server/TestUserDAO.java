@@ -3,6 +3,7 @@ package ru.clonebox.server;
 import org.hibernate.Session;
 import org.junit.*;
 import org.junit.runners.MethodSorters;
+import ru.clonebox.common.Util;
 import ru.clonebox.server.DAO.HibernateSessionFactoryUtil;
 import ru.clonebox.server.DAO.UserDAO;
 
@@ -10,7 +11,7 @@ import ru.clonebox.server.DAO.UserDAO;
 import static org.junit.Assert.*;
 
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
-public class TestUaerDAO {
+public class TestUserDAO {
     Session session;
     UserDAO userDAO;
 
@@ -24,6 +25,11 @@ public class TestUaerDAO {
     public void a_LoginNotExistUser() {
         assertFalse(userDAO.isUserExist("NotExistUser"));
     }
+
+   /* @Test
+    public void a_LoginNotExistUser() {
+        assertTrue(userDAO.getUser("1", Util.CreateHash("123")));
+    }*/
 
     @Test
     public void b_NotExistUserWithPass() {

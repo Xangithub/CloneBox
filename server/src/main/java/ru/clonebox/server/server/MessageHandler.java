@@ -1,4 +1,5 @@
-package ru.clonebox.server.Server;
+package ru.clonebox.server.server;
+
 
 import ru.clonebox.messages.AbstractMessage;
 

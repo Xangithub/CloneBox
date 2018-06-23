@@ -1,4 +1,4 @@
-package ru.clonebox.server.Server;
+package ru.clonebox.server.server;
 
 import ru.clonebox.common.Constance;
 import ru.clonebox.common.Util;
@@ -32,6 +32,12 @@ public class KeyProcessor implements Runnable {
 
     Loggable loggable;
 
+    /**
+     * создание экземпляра класса для данного ключа
+     *
+     * @param key
+     * @param clientProcessor
+     */
     public KeyProcessor(SelectionKey key, ClientProcessor clientProcessor) {
         this.loggable = clientProcessor.loggable;
         if (key == null) {
@@ -42,6 +48,7 @@ public class KeyProcessor implements Runnable {
         this.channel = (SocketChannel) key.channel();
         this.clientProcessor = clientProcessor;
     }
+
 
     @Override
     public void run() {
@@ -80,7 +87,7 @@ public class KeyProcessor implements Runnable {
         switch (type) {
             case AUTH:
                 AuthRequest authMessage = (AuthRequest) receivedMessage;
-
+                System.out.println("получено сообщение с  именем " + authMessage.getLogin() + " и паролем " + authMessage.getHashPassword());
                 //Если сообщение Регистрация пользователя
                 if (authMessage.isRegistrationRequest()) {
                     loggable.print("\nПопытка зарегистрировать пользователя" + authMessage);
@@ -96,7 +103,7 @@ public class KeyProcessor implements Runnable {
                 } else { //Если сообщение проверка пароля
 
                     boolean auth = dBhelper.getUser(authMessage.getLogin(), authMessage.getHashPassword());
-
+                    Util.log("ВОт что вернула проверка логина и пароля" + auth);
                     if (auth) {
                         push(new AuthAnswer(true));
                         loggable.print("\nпользователь авторизован. Сформирован положительный ответ клиенту");

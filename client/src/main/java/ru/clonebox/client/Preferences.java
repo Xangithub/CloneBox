@@ -14,7 +14,7 @@ import static ru.clonebox.common.Constance.FILE_CONFIG;
 public final class Preferences {
     public String remoteIP = "localhost";
     public int remotePORT = 9090;
-    public String pathSync = "y:/client/";
+    public String pathSync = "x:/client/";
     //   transient public StringProperty loginSP = new SimpleStringProperty("");
 //   transient public StringProperty passSP = new SimpleStringProperty("");
     public boolean autoSync = false;

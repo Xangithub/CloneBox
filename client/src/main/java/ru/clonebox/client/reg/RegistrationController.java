@@ -11,6 +11,7 @@ import javafx.scene.control.TextField;
 import javafx.scene.layout.Pane;
 import ru.clonebox.client.Client;
 import ru.clonebox.client.DataProvider;
+import ru.clonebox.client.client.WindowClient;
 import ru.clonebox.common.*;
 import ru.clonebox.messages.AuthAnswer;
 import ru.clonebox.messages.AuthRequest;
@@ -20,7 +21,7 @@ import java.util.concurrent.ExecutionException;
 
 
 public class RegistrationController {
-    public static final String CLIENT_FXML = "client/client.fxml";
+    public static final String CLIENT_FXML = "client.fxml";
     @FXML
     private Button sendReg;
     @FXML
@@ -139,7 +140,7 @@ public class RegistrationController {
             // Загружаем fxml-файл и создаём новую сцену
             // для всплывающего диалогового окна.
             FXMLLoader loader = new FXMLLoader(); //создаем объект для загрузки интерфейса //todo 4 окна один код. Упростить - метод загрузки или класс?? Фабрика?
-            loader.setLocation(Client.class.getResource(CLIENT_FXML)); //Указываем на файл с ресурсами
+            loader.setLocation(WindowClient.class.getResource(CLIENT_FXML)); //Указываем на файл с ресурсами
             Pane mainWindow = loader.load(); // Загружаем ресурс на панель
             DataProvider.sceneMainWindow = new Scene(mainWindow);
 

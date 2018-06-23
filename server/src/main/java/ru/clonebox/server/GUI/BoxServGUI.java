@@ -12,8 +12,7 @@ import javafx.scene.control.TextField;
 import javafx.scene.image.Image;
 import javafx.stage.Stage;
 import ru.clonebox.server.Loggable;
-import ru.clonebox.server.RLoader;
-import ru.clonebox.server.Server.ClientAcceptor;
+import ru.clonebox.server.server.ClientAcceptor;
 import ru.clonebox.server.Stoppable;
 
 import java.nio.file.Path;
@@ -43,18 +42,11 @@ public class BoxServGUI extends Application implements Loggable {
 
     @Override
     public void start(Stage primaryStage) throws Exception {
-//        System.out.println(getClass().getResource("server-gui.fxml"));
-//        System.out.println(Thread.currentThread().getContextClassLoader().getResource("server-gui.fxml"));
-//        Parent root = FXMLLoader.load(getClass().getResource("../../../server-gui.fxml"));
-//        Parent root = FXMLLoader.load(getClass().getResource("../../../server-gui.fxml"));
-        Parent root = FXMLLoader.load(RLoader.getResource("view/server-gui.fxml"));
+//        Parent root = FXMLLoader.load(getClass().getResource("/ru/clonebox/server/view/server-gui.fxml"));
+        Parent root = FXMLLoader.load(getClass().getResource("server-gui.fxml"));
         primaryStage.setTitle("Клиент CloneBox");
-//        InputStream inputStream =ru.clonebox.server.RLoader.getResourceAsStream("clonebox.png");
-//        primaryStage.getIcons().add(new Image(BoxServGUI.class.getResourceAsStream("clonebox.png")));
-//        primaryStage.getIcons().add(new Image(ru.clonebox.server.RLoader.class.getResourceAsStream("resource/clonebox.png")));
-//        System.out.println(RLoader.class.getPackage().getName());
-        ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
-        primaryStage.getIcons().add(new Image(String.valueOf(classLoader.getResource("image/clonebox.png"))));
+//        primaryStage.getIcons().add(new Image(getClass().getResourceAsStream("/ru/clonebox/server/image/clonebox.png")));
+        primaryStage.getIcons().add(new Image(getClass().getResourceAsStream("clonebox.png")));
         Scene mainScene = new Scene(root);
         primaryStage.setScene(mainScene);
         boxServGUI = this;

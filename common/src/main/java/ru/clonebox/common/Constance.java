@@ -12,8 +12,8 @@ public interface Constance {
     String LOCAL_ADDRESS = "localhost";
     String REMOTE_ADDRESS = "localhost";
 
-    String DIR_OUT_CLIENT = "y:/client/";
-    String DIR_OUT_SERVER = "y:/serv/";
+//    String DIR_OUT_CLIENT = "y:/client/";
+    String DIR_OUT_SERVER = "x:/serv/";
 //String DIR_OUT_CLIENT ="d:/client/";
 //    String DIR_OUT_SERVER ="d:/serv/";
 
